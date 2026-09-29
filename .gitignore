@@ -1,0 +1,3 @@
+# Clave real de administrador -- nunca debe subirse al repositorio.
+# Copia api/config.example.php a api/config.php en el servidor con tu propia clave.
+api/config.php

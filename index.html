@@ -183,6 +183,11 @@
     <button class="tab" data-tab="terreno" onclick="switchTab('terreno')" title="Terreno">🖌️<span class="tabLabel">Terreno</span></button>
     <button class="tab" data-tab="objetos" onclick="switchTab('objetos')" title="Objetos">📦<span class="tabLabel">Objetos</span></button>
   </div>
+  <div id="buildBar" class="row buttons" style="display:none;padding:8px 12px 0;">
+    <button class="adminLock" onclick="setAdminMode()" title="Clave de administrador para poder guardar en el servidor">🔒 Iniciar modo administrador</button>
+    <button class="saveProgressBtn" onclick="saveProgress()" disabled title="Guardar avance en el servidor">💾 Guardar avance</button>
+  </div>
+  <div class="hint saveStatusText" id="buildBarStatus" style="padding:2px 12px 8px;min-height:14px;"></div>
   <div id="tabContent">
 
     <div class="tabPane active" data-pane="explorar">
@@ -236,8 +241,8 @@
       <div class="row buttons">
         <button onclick="clearAllPaint()" title="Restablecer todo" class="danger">🗑 Restablecer a pasto</button>
       </div>
-      <div class="row hint" id="saveStatus">
-        Materiales reales (fotografía PBR), no colores planos — pintan sólido con un borde suave. Para corregir un detalle, repinta encima con "Pasto". Se guarda automáticamente.
+      <div class="row hint">
+        Materiales reales (fotografía PBR), no colores planos — pintan sólido con un borde suave. Para corregir un detalle, repinta encima con "Pasto". Se intenta guardar solo al terminar cada trazo; usa "💾 Guardar avance" arriba para forzarlo.
       </div>
     </div>
 
@@ -268,7 +273,7 @@
         Elige un modelo o símbolo y haz clic en el terreno (varios clics seguidos = varias copias). Clic + arrastrar sobre un objeto ya puesto para moverlo (se ajusta solo a la altura real del terreno). Clic simple en un número = ver/editar su ficha. <b>Q</b>/<b>E</b> rota, <b>Delete</b> borra, <b>Alt+clic</b> borra rápido, o usa "Modo borrar".
       </div>
       <div class="row hint">
-        Los modelos y símbolos no se guardan entre sesiones todavía (a diferencia de la pintura de terreno). Si recargas la página, tendrás que reinsertarlos.
+        Los símbolos y números (con su ficha) sí se guardan en el servidor igual que la pintura de terreno. Los modelos .glb importados <b>todavía no</b> — si recargas la página tendrás que reinsertarlos (pendiente: guardar el archivo .glb en el servidor, no solo su posición).
       </div>
     </div>
 
@@ -4414,6 +4419,8 @@ window.addEventListener('mouseup', e=>{
     // clic sin arrastre real sobre un número -> abre la ficha de historia
     if(moved<4 && dragMoveTarget.name && dragMoveTarget.name.startsWith('sym_num_')){
       openStoryModal(dragMoveTarget);
+    } else if(moved>=4){
+      scheduleAutoSave(); // se arrastró y movió de posición
     }
     dragMoveTarget = null;
   }
@@ -4520,6 +4527,12 @@ function switchTab(tabName){
   else if(tabName==='terreno'){ activePaint='sendero'; syncRadiusUI(); }
   if(tabName!=='objetos'){ placingMode = false; eraseMode = false; activeAssetName = null; document.querySelectorAll('.objChip').forEach(c=>c.classList.remove('active')); document.getElementById('eraseToggle') && document.getElementById('eraseToggle').classList.remove('active'); }
   clearSelectionHighlight(); selectedObject = null;
+
+  const buildBar = document.getElementById('buildBar');
+  const buildBarStatus = document.getElementById('buildBarStatus');
+  const inBuildTab = (tabName==='caminos' || tabName==='terreno' || tabName==='objetos');
+  if(buildBar) buildBar.style.display = inBuildTab ? 'flex' : 'none';
+  if(buildBarStatus) buildBarStatus.style.display = inBuildTab ? 'block' : 'none';
 
   if(brushMode) container.style.cursor = 'crosshair';
   else if(tabName==='objetos') container.style.cursor = 'default';
@@ -4658,24 +4671,10 @@ function endPaintStroke(){
   maskStrokeSnapshot = null;
   if(isRoadTab && currentRoadPoints && currentRoadPoints.length>=2){
     roadPaths.push({points:currentRoadPoints});
-    saveRoadPaths();
   }
   currentRoadPoints = null;
-  saveAllMasks();
+  scheduleAutoSave();
 }
-async function saveRoadPaths(){
-  try{ window.storage && window.storage.set('road-paths', JSON.stringify(roadPaths), false).catch(()=>{}); }catch(e){}
-}
-async function loadRoadPaths(){
-  try{
-    if(!window.storage) return;
-    const res = await window.storage.get('road-paths', false);
-    if(!res || !res.value) return;
-    const data = JSON.parse(res.value);
-    roadPaths.push(...data);
-  }catch(err){ /* sin rutas guardadas todavia */ }
-}
-loadRoadPaths();
 
 function restoreMaskFromDataURL(mat, dataURL){
   return new Promise((resolve)=>{
@@ -4700,7 +4699,7 @@ function undoPaint(){
     return restoreMaskFromDataURL(ALL_MATERIALS[k], snap[k]);
   })).then(()=>{
     maskRedoStack.push(redoSnap);
-    saveAllMasks();
+    scheduleAutoSave();
   });
 }
 function redoPaint(){
@@ -4712,7 +4711,7 @@ function redoPaint(){
     return restoreMaskFromDataURL(ALL_MATERIALS[k], snap[k]);
   })).then(()=>{
     maskHistory.push(undoSnap);
-    saveAllMasks();
+    scheduleAutoSave();
   });
 }
 function clearAllPaint(){
@@ -4723,37 +4722,99 @@ function clearAllPaint(){
     mat.maskTexture.needsUpdate = true;
   });
   maskHistory.length = 0; maskRedoStack.length = 0;
-  saveAllMasks();
+  scheduleAutoSave();
 }
 
-function saveAllMasks(){
-  const statusEl = document.getElementById('saveStatus');
+// ---------------------------------------------------------------------
+// PERSISTENCIA REAL EN SERVIDOR -- reemplaza el viejo `window.storage`
+// (una API que nunca llegó a existir en este despliegue: todo lo que se
+// "guardaba" antes solo vivía en la memoria de la pestaña y se perdía al
+// recargar). Ahora: lectura pública de data/state.json y escritura vía
+// api/save.php, protegida con una clave de administrador que cada quien
+// activa en su propio navegador (no viaja en el código).
+// ---------------------------------------------------------------------
+const ADMIN_TOKEN_KEY = 'medialuna_admin_token';
+function getAdminToken(){
+  try{ return sessionStorage.getItem(ADMIN_TOKEN_KEY) || ''; }catch(e){ return ''; }
+}
+function setAdminMode(){
+  const had = !!getAdminToken();
+  const token = prompt(had
+    ? 'Ya hay una clave de administrador activa en esta pestaña.\nPega una nueva para reemplazarla, o cancela para dejarla como está.'
+    : 'Clave de administrador (para poder guardar cambios en el servidor):');
+  if(token===null) return;
+  try{ sessionStorage.setItem(ADMIN_TOKEN_KEY, token.trim()); }catch(e){}
+  updateAdminUI();
+  setBuildStatus(getAdminToken() ? 'Modo administrador activo en esta pestaña.' : '');
+}
+function updateAdminUI(){
+  const on = !!getAdminToken();
+  document.querySelectorAll('.adminLock').forEach(b=> b.textContent = on ? '🔓 Administrador activo' : '🔒 Iniciar modo administrador');
+  document.querySelectorAll('.saveProgressBtn').forEach(b=> b.disabled = !on);
+}
+function setBuildStatus(msg){
+  const el = document.getElementById('buildBarStatus');
+  if(el) el.textContent = msg;
+}
+
+function collectMasksData(){
+  const out = {};
+  Object.keys(ALL_MATERIALS).forEach(k=>{ out[k] = ALL_MATERIALS[k].maskCanvas.toDataURL('image/png'); });
+  return out;
+}
+
+let autoSaveTimer = null;
+function scheduleAutoSave(){
+  if(!getAdminToken()) return; // sin clave activa no intentamos -- evita mensajes de error de fondo
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(saveProgress, 1200);
+}
+
+let saveInFlight = false;
+async function saveProgress(){
+  const token = getAdminToken();
+  if(!token){ setBuildStatus('Activa el modo administrador (🔒 arriba) para poder guardar.'); return; }
+  if(saveInFlight) return;
+  saveInFlight = true;
+  setBuildStatus('Guardando…');
   try{
-    if(!window.storage){ return; }
-    const puts = Object.keys(ALL_MATERIALS).map(k=>
-      window.storage.set('paint-mask-'+k, ALL_MATERIALS[k].maskCanvas.toDataURL('image/png'), false)
-    );
-    Promise.all(puts).then(()=>{
-      if(statusEl) statusEl.textContent = 'Guardado ✓';
-    }).catch(()=>{
-      if(statusEl) statusEl.textContent = 'No se pudo guardar automáticamente en este entorno.';
+    const payload = { roadPaths, masks: collectMasksData(), objects: serializePlacedObjects() };
+    const res = await fetch('api/save.php', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Admin-Token':token},
+      body: JSON.stringify(payload)
     });
+    let json = {};
+    try{ json = await res.json(); }catch(e){}
+    if(res.ok && json.ok){
+      setBuildStatus('Guardado ✓ — ' + new Date().toLocaleTimeString('es-MX'));
+    } else if(res.status===401){
+      setBuildStatus('Clave de administrador incorrecta.');
+    } else {
+      setBuildStatus('No se pudo guardar: ' + (json.error || ('HTTP '+res.status)));
+    }
   }catch(err){
-    if(statusEl) statusEl.textContent = 'No se pudo guardar automáticamente en este entorno.';
+    setBuildStatus('Sin conexión con el servidor -- no se pudo guardar.');
+  } finally {
+    saveInFlight = false;
   }
 }
-async function loadAllMasks(){
+
+async function loadProgress(){
   try{
-    if(!window.storage) return;
-    await Promise.all(Object.keys(ALL_MATERIALS).map(async k=>{
-      const res = await window.storage.get('paint-mask-'+k, false);
-      if(res && res.value) await restoreMaskFromDataURL(ALL_MATERIALS[k], res.value);
-    }));
-    const statusEl = document.getElementById('saveStatus');
-    if(statusEl) statusEl.textContent = 'Pintura cargada.';
-  }catch(err){ /* sin datos guardados todavia -- normal en la primera visita */ }
+    const res = await fetch('data/state.json?t=' + Date.now());
+    if(!res.ok) return;
+    const data = await res.json();
+    if(Array.isArray(data.roadPaths)) roadPaths.push(...data.roadPaths);
+    if(data.masks){
+      await Promise.all(Object.keys(data.masks).map(k=>
+        ALL_MATERIALS[k] ? restoreMaskFromDataURL(ALL_MATERIALS[k], data.masks[k]) : Promise.resolve()
+      ));
+    }
+    if(Array.isArray(data.objects) && data.objects.length) restorePlacedObjects(data.objects);
+  }catch(err){ /* sin datos guardados todavía -- normal en la primera visita */ }
 }
-loadAllMasks();
+
 buildPaletteSwatches();
 
 // ---------------------------------------------------------------------
@@ -4936,6 +4997,52 @@ function placeAssetAt(worldPoint){
   }
   scene.add(instance);
   placedObjects.push({name:activeAssetName, type:asset.type, obj:instance, stem, info:null});
+  if(!restoringProgress) scheduleAutoSave();
+}
+let restoringProgress = false;
+
+// --- Persistencia de objetos colocados ---------------------------------
+// Los símbolos fijos (SYMBOL_DEFS) y los números se reconstruyen solo con
+// su clave/número + posición + ficha, así que sí se pueden guardar en el
+// servidor. Los modelos .glb importados requerirían guardar también el
+// archivo binario -- eso queda pendiente, se excluyen aquí a propósito.
+function serializePlacedObjects(){
+  return placedObjects.map(entry=>{
+    if(entry.type!=='sprite') return null; // modelo .glb -- no persistible todavía
+    const isNumber = /^sym_num_/.test(entry.name);
+    const isFixedSymbol = SYMBOL_DEFS.some(d=>d.key===entry.name);
+    if(!isNumber && !isFixedSymbol) return null;
+    return {
+      kind: isNumber ? 'number' : 'symbol',
+      key: entry.name,
+      n: isNumber ? entry.name.split('_')[2] : undefined,
+      x: entry.obj.position.x,
+      z: entry.obj.position.z,
+      info: entry.info || null
+    };
+  }).filter(Boolean);
+}
+function restorePlacedObjects(list){
+  restoringProgress = true;
+  list.forEach(item=>{
+    let key = null;
+    if(item.kind==='symbol' && loadedAssets[item.key]){
+      key = item.key;
+    } else if(item.kind==='number'){
+      key = 'sym_num_'+item.n+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+      loadedAssets[key] = {type:'sprite', texture: buildIconTexture(String(item.n), '#6b4d34')};
+    }
+    if(!key) return;
+    activeAssetName = key;
+    placeAssetAt({x:item.x, z:item.z});
+    if(item.info){
+      const entry = placedObjects[placedObjects.length-1];
+      if(entry) entry.info = item.info;
+    }
+  });
+  activeAssetName = null;
+  placingMode = false;
+  restoringProgress = false;
 }
 
 function setRotationDeg(v){
@@ -5021,6 +5128,7 @@ function deleteEntry(entry){
   if(entry.stem) scene.remove(entry.stem);
   placedObjects = placedObjects.filter(p=>p!==entry);
   if(selectedObject===entry){ clearSelectionHighlight(); selectedObject=null; }
+  scheduleAutoSave();
 }
 function removeSelectedObject(){
   if(!selectedObject) return;
@@ -5050,6 +5158,7 @@ function saveStoryModal(){
   const entry = placedObjects[idx];
   if(entry){
     entry.info = { title: document.getElementById('storyTitle').value, text: document.getElementById('storyText').value };
+    scheduleAutoSave();
   }
   closeStoryModal();
 }
@@ -5108,6 +5217,8 @@ function animate(){
   renderer.render(scene, camera);
 }
 animate();
+updateAdminUI();
+loadProgress();
 </script>
 </body>
 </html>

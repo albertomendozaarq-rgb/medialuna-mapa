@@ -4000,10 +4000,11 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
 renderer.shadowMap.enabled = true;
 container.appendChild(renderer.domElement);
 
-// Luces -- más brillo de relleno y sol más intenso para un look diurno
-// saturado, en vez del ambiente apagado/oscuro anterior.
-scene.add(new THREE.AmbientLight(0xffffff, 0.75));
-const sun = new THREE.DirectionalLight(0xfff6e0, 1.35);
+// Luces -- diurno pero sin lavar el color de las texturas: la iteración
+// anterior (0.75 ambiental + 1.35 sol color crema) sobreexponía el pasto
+// base y lo volvía amarillo/blanco en vez de un tono tierra opaco.
+scene.add(new THREE.AmbientLight(0xffffff, 0.52));
+const sun = new THREE.DirectionalLight(0xfff1e0, 0.92);
 sun.position.set(300, 500, 200);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048,2048);

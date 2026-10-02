@@ -4010,6 +4010,12 @@ sun.shadow.mapSize.set(2048,2048);
 sun.shadow.camera.left = -500; sun.shadow.camera.right = 500;
 sun.shadow.camera.top = 500; sun.shadow.camera.bottom = -500;
 sun.shadow.camera.far = 1500;
+// Bias/normalBias -- sin esto, una malla extensa y de rejilla abierta
+// (LiDAR ~11 m entre vértices) muestra "shadow acne": rayas repetitivas
+// de autosombreado que no vienen de los datos de elevación, sino de la
+// falta de holgura entre la superficie y su propia sombra proyectada.
+sun.shadow.bias = -0.0009;
+sun.shadow.normalBias = 0.8;
 scene.add(sun);
 
 // --- Terreno: malla de relieve construida con elevación REAL (INEGI) ---
@@ -4286,8 +4292,12 @@ terrainMat.onBeforeCompile = (shader)=>{
   terrainMat.userData.shader = shader;
 };
 const terrainMesh = new THREE.Mesh(terrainGeo, terrainMat);
-terrainMesh.receiveShadow = true;
-terrainMesh.castShadow = true;
+// El terreno NO se autosombrea -- causa principal de las rayas repetitivas
+// (shadow acne) sobre la malla LiDAR. Caminos, vegetación y objetos
+// colocados siguen proyectando/recibiendo sombra con normalidad; solo el
+// terreno queda fuera de ese cálculo sobre sí mismo.
+terrainMesh.receiveShadow = false;
+terrainMesh.castShadow = false;
 scene.add(terrainMesh);
 
 // Contorno del predio, siguiendo la elevación real en cada vértice

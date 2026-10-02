@@ -234,6 +234,10 @@
         <label>Radio del pincel: <span id="radiusLabel">14</span> m</label>
         <input type="range" id="radiusSlider" min="2" max="45" step="1" value="14" oninput="setPaintRadius(this.value)">
       </div>
+      <div class="row">
+        <label>Traslape: <span id="blendLabel">48</span>%</label>
+        <input type="range" id="blendSlider" min="10" max="75" step="1" value="48" oninput="setBrushBlend(this.value)">
+      </div>
       <div class="row buttons">
         <button onclick="undoPaint()" title="Deshacer">↶ Deshacer</button>
         <button onclick="redoPaint()" title="Rehacer">↷ Rehacer</button>
@@ -4702,6 +4706,18 @@ function setPaintRadius(v){
   syncRadiusUI();
 }
 
+// Traslape del pincel: qué tan ancha es la franja semitransparente del
+// borde antes de llegar al centro sólido. Global para todos los
+// materiales (terreno y caminos comparten paintMaskCircle) -- no hace
+// falta un control por pincel. 0.10 = borde definido, 0.75 = transición
+// muy extendida. Ver paintMaskCircle().
+let brushBlend = 0.48;
+function setBrushBlend(value){
+  brushBlend = Math.min(Math.max(parseFloat(value)/100, 0.10), 0.75);
+  const label = document.getElementById('blendLabel');
+  if(label) label.textContent = Math.round(brushBlend*100);
+}
+
 function groundPointFromEvent(e){
   const rect = container.getBoundingClientRect();
   mouseNDC.x = ((e.clientX-rect.left)/rect.width)*2-1;
@@ -4739,21 +4755,52 @@ function paintAt(worldPoint){
 // Pincel SÓLIDO: pinta (source-over) o borra (destination-out) un color
 // pleno de una sola pasada, con un borde corto suavizado (antialiasing,
 // no transparencia general) sobre la máscara del material dado.
+// Pincel con traslape: centro sólido + franja orgánica semitransparente en
+// el borde (controlada por brushBlend), más "islas" deterministas en esa
+// franja para que al pintar un material sobre otro ambos queden
+// entrelazados en vez de cortarse en un círculo limpio. Reemplaza el
+// degradado simple (0.85*radio -> radio) por uno adaptado al traslape más
+// un patrón de manchas cuya semilla depende de la posición pintada, así
+// que no cambia entre pintadas en el mismo punto ni entre recargas.
 function paintMaskCircle(mat, worldPoint, radius, isPaint){
   const px = (worldPoint.x-g.x0)/(g.x1-g.x0) * ROAD_MASK_W;
   const py = (worldPoint.z-g.z0)/(g.z1-g.z0) * ROAD_MASK_H;
   const radiusPx = Math.max(radius * ROAD_MASK_PX_PER_M, 1.5);
-  const edgeStartPx = radiusPx*0.85;
+  const outerRadiusPx = radiusPx * 1.12; // la textura se extiende ligeramente fuera del radio nominal
+  const edgeStartPx = radiusPx * (1 - brushBlend); // dónde termina el centro sólido y empieza la mezcla
   const ctx = mat.maskCtx;
   ctx.save();
   ctx.globalCompositeOperation = isPaint ? 'source-over' : 'destination-out';
-  const grad = ctx.createRadialGradient(px,py,edgeStartPx, px,py,radiusPx);
-  grad.addColorStop(0, 'rgba(255,255,255,1)');
-  grad.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = grad;
+
+  const gradient = ctx.createRadialGradient(px,py,edgeStartPx, px,py,outerRadiusPx);
+  gradient.addColorStop(0, 'rgba(255,255,255,1)');
+  gradient.addColorStop(0.42, 'rgba(255,255,255,0.78)');
+  gradient.addColorStop(0.76, 'rgba(255,255,255,0.28)');
+  gradient.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = gradient;
   ctx.beginPath();
-  ctx.arc(px,py,radiusPx,0,Math.PI*2);
+  ctx.arc(px,py,outerRadiusPx,0,Math.PI*2);
   ctx.fill();
+
+  // Islas orgánicas en la zona de transición -- deterministas: no cambian
+  // al volver a pintar el mismo lugar ni al recargar la página.
+  const seedBase = Math.abs(Math.sin(px*12.9898 + py*78.233)) * 43758.5453;
+  for(let i=0;i<14;i++){
+    const angle = ((seedBase*(i+1)*0.61803398875) % 1) * Math.PI*2;
+    const radialDistance = radiusPx * (0.62 + ((seedBase*(i+7)*0.41421356) % 1) * 0.5);
+    const dabRadius = radiusPx * (0.055 + ((seedBase*(i+13)*0.271828) % 1) * 0.12);
+    const dabX = px + Math.cos(angle)*radialDistance;
+    const dabY = py + Math.sin(angle)*radialDistance;
+    const dabGradient = ctx.createRadialGradient(dabX,dabY,0, dabX,dabY,dabRadius);
+    const alpha = isPaint ? 0.18 : 0.12;
+    dabGradient.addColorStop(0, `rgba(255,255,255,${alpha})`);
+    dabGradient.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = dabGradient;
+    ctx.beginPath();
+    ctx.arc(dabX,dabY,dabRadius,0,Math.PI*2);
+    ctx.fill();
+  }
+
   ctx.restore();
   mat.maskTexture.needsUpdate = true;
 }
@@ -4932,6 +4979,7 @@ function collectFullPayload(){
     masks: collectMasksData(),
     objects: serializePlacedObjects(),
     terrainStyle,
+    terrainSettings: { brushBlend },
     camera: { azimuth:camAzimuth, polar:camPolar, distance:camDistance, target:{x:camTarget.x,y:camTarget.y,z:camTarget.z} },
     version: PROJECT_VERSION,
     savedAt: new Date().toISOString(),
@@ -4956,10 +5004,16 @@ async function saveProgress(){
   setBuildStatus('Guardando…');
   try{
     const payload = collectFullPayload();
+    // Se manda como multipart/form-data (archivo adjunto), no como JSON
+    // crudo en el body: el firewall del hosting corta peticiones sin
+    // archivo a ~1 MB y las máscaras pintadas lo superan fácilmente. Ver
+    // la nota equivalente en api/save.php.
+    const fd = new FormData();
+    fd.append('payload', new Blob([JSON.stringify(payload)], {type:'application/json'}), 'payload.json');
     const res = await fetch('api/save.php', {
       method:'POST',
-      headers:{'Content-Type':'application/json','X-Admin-Token':token},
-      body: JSON.stringify(payload)
+      headers:{'X-Admin-Token':token}, // sin Content-Type -- el navegador pone el boundary multipart
+      body: fd
     });
     let json = {};
     try{ json = await res.json(); }catch(e){}
@@ -4982,6 +5036,13 @@ function applyLoadedData(data){
   if(!data) return;
   if(Array.isArray(data.roadPaths)) roadPaths.push(...data.roadPaths);
   if(Array.isArray(data.objects) && data.objects.length) restorePlacedObjects(data.objects);
+  if(data.terrainSettings && Number.isFinite(data.terrainSettings.brushBlend)){
+    brushBlend = data.terrainSettings.brushBlend;
+    const slider = document.getElementById('blendSlider');
+    if(slider) slider.value = Math.round(brushBlend*100);
+    const label = document.getElementById('blendLabel');
+    if(label) label.textContent = Math.round(brushBlend*100);
+  }
   if(data.camera){
     camAzimuth = data.camera.azimuth ?? camAzimuth;
     camPolar = data.camera.polar ?? camPolar;

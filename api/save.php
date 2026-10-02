@@ -34,7 +34,19 @@ if ($realToken === '' || $realToken === 'CAMBIA-ESTA-CLAVE-POR-UNA-LARGA-Y-UNICA
     exit;
 }
 
-$raw = file_get_contents('php://input');
+// El cuerpo viaja como multipart/form-data (campo "payload", un Blob JSON)
+// en vez de JSON crudo en el body: el firewall del hosting (ModSecurity)
+// aplica un límite muy bajo (~1 MB, SecRequestBodyNoFilesLimit) a peticiones
+// sin archivos, pero las máscaras pintadas ya superan eso con facilidad.
+// Empaquetar el JSON como un archivo adjunto evita ese límite porque entra
+// por la regla de peticiones CON archivos, mucho más permisiva.
+// Se mantiene el fallback a php://input por compatibilidad con llamadas
+// directas (pruebas, scripts) que sí manden el JSON crudo.
+if (isset($_FILES['payload']) && is_uploaded_file($_FILES['payload']['tmp_name'])) {
+    $raw = file_get_contents($_FILES['payload']['tmp_name']);
+} else {
+    $raw = file_get_contents('php://input');
+}
 if ($raw === false || strlen($raw) === 0) {
     http_response_code(400);
     echo json_encode(['ok' => false, 'error' => 'Sin datos en la petición']);

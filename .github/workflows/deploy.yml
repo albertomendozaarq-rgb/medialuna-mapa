@@ -1,0 +1,36 @@
+name: Publicar Media Luna en cPanel
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Desplegar por FTPS
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el proyecto
+        uses: actions/checkout@v6
+
+      - name: Sincronizar archivos con cPanel
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          port: 21
+          local-dir: ./
+          server-dir: ./
+          state-name: .ftp-deploy-sync-state.json
+          log-level: minimal
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.github/**
+            **/node_modules/**
+            .cpanel.yml
+            .gitignore
+            api/config.php
+            data/state.json
+            data/state.backup.json

@@ -89,6 +89,35 @@
     background:var(--panel-bg); border:1px solid var(--dorado); border-radius:10px;
     box-shadow:0 8px 26px rgba(0,0,0,.55); overflow:hidden;
   }
+  #panelToggle{
+    position:absolute;left:16px;top:70px;z-index:14;border:1px solid var(--dorado);border-radius:999px;
+    padding:9px 13px;background:var(--panel-bg);color:var(--dorado-claro);font-family:inherit;cursor:pointer;
+    box-shadow:0 5px 18px rgba(0,0,0,.45);display:block;
+  }
+  #sidebar.collapsed{display:none;}
+  #visitBadge{position:absolute;right:16px;top:65px;z-index:11;padding:7px 11px;border-radius:999px;
+    background:rgba(30,21,14,.86);border:1px solid rgba(240,196,121,.65);color:var(--papel);font-size:11px;}
+  #saveToast{position:absolute;left:50%;top:72px;z-index:40;transform:translate(-50%,-12px);opacity:0;
+    pointer-events:none;background:#244a2c;color:#f4ffe9;border:1px solid #8acb79;border-radius:999px;
+    padding:10px 18px;font-size:13px;box-shadow:0 8px 28px rgba(0,0,0,.38);transition:.22s ease;}
+  #saveToast.show{opacity:1;transform:translate(-50%,0);}
+  #compass{position:absolute;right:18px;bottom:18px;z-index:11;width:58px;height:58px;border-radius:50%;
+    background:rgba(245,239,224,.93);border:2px solid #6b4d34;color:#5b251f;box-shadow:0 5px 18px rgba(0,0,0,.35);
+    display:flex;align-items:center;justify-content:center;font:bold 13px Georgia;pointer-events:none;}
+  #compassNeedle{position:absolute;width:3px;height:40px;background:linear-gradient(#a8372a 0 50%,#3a2b1e 50%);border-radius:3px;}
+  #compass span{position:absolute;top:3px;z-index:1;}
+  .catalogSection{border-top:1px solid rgba(233,196,128,.22);margin-top:12px;padding-top:11px;}
+  .axisGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:6px;}
+  .axisGrid button{padding:6px 2px;border-radius:6px;border:1px solid var(--card-border);background:var(--card-bg);color:var(--panel-texto);font-family:inherit;cursor:pointer;}
+  .editorOnly{display:none;}
+  body.editor-mode .editorOnly{display:flex;}
+  body:not(.editor-mode) #tabBar .editTab{display:none;}
+  @media(max-width:700px){
+    header{padding:12px 14px 32px;} header h1{font-size:15px;} header .sub{font-size:9px;}
+    #sidebar{left:8px;right:8px;top:108px;bottom:8px;width:auto;max-height:72vh;}
+    #panelToggle{display:block;left:8px;top:67px;}
+    #visitBadge{right:8px;top:68px;} #compass{right:10px;bottom:10px;width:50px;height:50px;}
+  }
   #tabBar{ display:flex; border-bottom:1px solid rgba(233,196,128,0.25); flex-shrink:0; }
   #tabBar button{
     flex:1; padding:10px 4px; border:none; background:var(--panel-bg-solid); cursor:pointer;
@@ -172,18 +201,23 @@
 <div id="labels"></div>
 
 <header>
-  <h1>Destino La Media Luna</h1>
-  <div class="sub">ETAPA 1 — TERRITORIO BASE (PROVISIONAL)</div>
+  <h1>Mapa Interactivo La Media Luna</h1>
+  <div class="sub">DONDE SE VIVE LA BUENA VIDA DE CAMPO</div>
 </header>
+
+<button id="panelToggle" onclick="togglePanel()" aria-expanded="true">☰ Abrir mapa</button>
+<div id="visitBadge">👁 Modo visita</div>
+<div id="saveToast" role="status">✓ Avance guardado</div>
+<div id="compass" aria-label="Brújula, norte INEGI"><span>N</span><div id="compassNeedle"></div></div>
 
 <div id="sidebar">
   <div id="tabBar">
     <button class="tab active" data-tab="explorar" onclick="switchTab('explorar')" title="Explorar">🧭<span class="tabLabel">Explorar</span></button>
-    <button class="tab" data-tab="caminos" onclick="switchTab('caminos')" title="Caminos">🛣️<span class="tabLabel">Caminos</span></button>
-    <button class="tab" data-tab="terreno" onclick="switchTab('terreno')" title="Terreno">🖌️<span class="tabLabel">Terreno</span></button>
-    <button class="tab" data-tab="objetos" onclick="switchTab('objetos')" title="Objetos">📦<span class="tabLabel">Objetos</span></button>
+    <button class="tab editTab" data-tab="caminos" onclick="switchTab('caminos')" title="Caminos">🛣️<span class="tabLabel">Caminos</span></button>
+    <button class="tab editTab" data-tab="terreno" onclick="switchTab('terreno')" title="Terreno">🖌️<span class="tabLabel">Terreno</span></button>
+    <button class="tab editTab" data-tab="objetos" onclick="switchTab('objetos')" title="Objetos">📦<span class="tabLabel">Objetos</span></button>
   </div>
-  <div id="buildBar" class="row buttons" style="display:none;padding:8px 12px 0;">
+  <div id="buildBar" class="row buttons editorOnly" style="padding:8px 12px 0;">
     <button class="adminLock" onclick="setAdminMode()" title="Clave de administrador para poder guardar en el servidor">🔒 Iniciar modo administrador</button>
     <button class="saveProgressBtn" onclick="saveProgress()" disabled title="Guardar avance en el servidor">💾 Guardar avance</button>
   </div>
@@ -209,6 +243,7 @@
       <div class="hint" style="margin-top:10px;padding-top:8px;border-top:1px solid #ddd0b0;">
         También puedes usar el mouse: clic izq + arrastrar = rotar · clic der + arrastrar = paneo · rueda = zoom.
       </div>
+      <div class="row buttons" style="margin-top:14px;"><button class="adminLock" onclick="setAdminMode()">✏️ Entrar al modo editor</button></div>
     </div>
 
     <div class="tabPane" data-pane="caminos">
@@ -263,6 +298,11 @@
       <div class="row col" id="vegetationList"></div>
       <div class="row hint">Árboles ligeros de bajo poligonaje. Elige una especie y haz clic varias veces sobre el terreno para formar grupos.</div>
 
+      <div class="catalogSection"><h3>Decoraciones de rancho</h3><div class="row col" id="decorList"></div></div>
+      <div class="catalogSection"><h3>Animales de granja</h3><div class="row col" id="animalList"></div></div>
+      <div class="catalogSection"><h3>Vehículos</h3><div class="row col" id="vehicleList"></div></div>
+      <div class="catalogSection"><h3>Personas</h3><div class="row col" id="peopleList"></div></div>
+
       <h3 style="margin-top:14px;">Símbolos del mapa</h3>
       <div class="row col" id="symbolList"></div>
       <div class="row">
@@ -276,6 +316,15 @@
       </div>
       <div class="row buttons">
         <button id="eraseToggle" onclick="toggleEraseMode()" class="danger">🗑 Modo borrar</button>
+      </div>
+      <div class="catalogSection" id="transformTools">
+        <h3>Ajuste preciso del objeto seleccionado</h3>
+        <div class="axisGrid">
+          <button onclick="nudgeSelected(-1,0,0)">X−</button><button onclick="nudgeSelected(1,0,0)">X+</button><button onclick="nudgeSelected(0,1,0)">Y+</button>
+          <button onclick="nudgeSelected(0,0,-1)">Z−</button><button onclick="nudgeSelected(0,0,1)">Z+</button><button onclick="nudgeSelected(0,-1,0)">Y−</button>
+        </div>
+        <div class="row buttons"><button class="danger" onclick="confirmDeleteSelected()">🗑 Eliminar seleccionado</button></div>
+        <div class="hint">Selecciona un objeto colocado y muévelo en pasos de 1 metro sobre X, Y o Z.</div>
       </div>
       <div class="row hint">
         Elige un modelo o símbolo y haz clic en el terreno (varios clics seguidos = varias copias). Clic + arrastrar sobre un objeto ya puesto para moverlo (se ajusta solo a la altura real del terreno). Clic simple en un número = ver/editar su ficha. <b>Q</b>/<b>E</b> rota, <b>Delete</b> borra, <b>Alt+clic</b> borra rápido, o usa "Modo borrar".
@@ -300,13 +349,6 @@
       <button onclick="closeStoryModal()">Cerrar</button>
     </div>
   </div>
-</div>
-
-<div id="dataPanel">
-  <h3>Estado de los datos</h3>
-  <div><span class="confirmed">● Confirmado</span> — contorno real (KML), 20.6 ha</div>
-  <div><span class="confirmed">● Confirmado</span> — punto de referencia GPS</div>
-  <div><span class="confirmed">● Confirmado</span> — relieve real (INEGI LiDAR 5m), suavizado y sin picos aislados</div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -4006,6 +4048,10 @@ const renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
 renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
 container.appendChild(renderer.domElement);
 
 // Luces -- diurno pero sin lavar el color de las texturas: la iteración
@@ -4673,6 +4719,11 @@ const raycaster = new THREE.Raycaster();
 const mouseNDC = new THREE.Vector2();
 
 function switchTab(tabName){
+  if(tabName!=='explorar' && !editorMode){
+    switchTab('explorar');
+    setBuildStatus('Entra al modo editor para modificar el mapa.');
+    return;
+  }
   document.querySelectorAll('#tabBar .tab').forEach(b=> b.classList.toggle('active', b.dataset.tab===tabName));
   document.querySelectorAll('.tabPane').forEach(p=> p.classList.toggle('active', p.dataset.pane===tabName));
 
@@ -4688,7 +4739,7 @@ function switchTab(tabName){
 
   const buildBar = document.getElementById('buildBar');
   const buildBarStatus = document.getElementById('buildBarStatus');
-  const inBuildTab = (tabName==='caminos' || tabName==='terreno' || tabName==='objetos');
+  const inBuildTab = editorMode;
   if(buildBar) buildBar.style.display = inBuildTab ? 'flex' : 'none';
   if(buildBarStatus) buildBarStatus.style.display = inBuildTab ? 'block' : 'none';
 
@@ -4883,8 +4934,15 @@ function restoreMaskFromDataURL(mat, dataURL){
   return new Promise((resolve)=>{
     const img = new Image();
     img.onload = ()=>{
+      // Suavizado visual no destructivo de los trazos ya guardados: elimina
+      // el borde recortado entre materiales sin cambiar el archivo original.
+      const softened=document.createElement('canvas');
+      softened.width=ROAD_MASK_W; softened.height=ROAD_MASK_H;
+      const sctx=softened.getContext('2d');
+      sctx.filter='blur(2.2px)';
+      sctx.drawImage(img,0,0);
       mat.maskCtx.clearRect(0,0,ROAD_MASK_W,ROAD_MASK_H);
-      mat.maskCtx.drawImage(img,0,0);
+      mat.maskCtx.drawImage(softened,0,0);
       mat.maskTexture.needsUpdate = true;
       resolve();
     };
@@ -4937,6 +4995,7 @@ function clearAllPaint(){
 // activa en su propio navegador (no viaja en el código).
 // ---------------------------------------------------------------------
 const ADMIN_TOKEN_KEY = 'medialuna_admin_token';
+let editorMode = false;
 function getAdminToken(){
   try{ return sessionStorage.getItem(ADMIN_TOKEN_KEY) || ''; }catch(e){ return ''; }
 }
@@ -4947,17 +5006,36 @@ function setAdminMode(){
     : 'Clave de administrador (para poder guardar cambios en el servidor):');
   if(token===null) return;
   try{ sessionStorage.setItem(ADMIN_TOKEN_KEY, token.trim()); }catch(e){}
+  editorMode = !!token.trim();
   updateAdminUI();
-  setBuildStatus(getAdminToken() ? 'Modo administrador activo en esta pestaña.' : '');
+  setBuildStatus(editorMode ? 'Modo editor activo. Los cambios pueden guardarse.' : '');
 }
 function updateAdminUI(){
-  const on = !!getAdminToken();
-  document.querySelectorAll('.adminLock').forEach(b=> b.textContent = on ? '🔓 Administrador activo' : '🔒 Iniciar modo administrador');
+  const on = editorMode && !!getAdminToken();
+  document.body.classList.toggle('editor-mode', on);
+  document.querySelectorAll('.adminLock').forEach(b=> b.textContent = on ? '🔓 Modo editor activo' : '✏️ Entrar al modo editor');
   document.querySelectorAll('.saveProgressBtn').forEach(b=> b.disabled = !on);
+  const badge=document.getElementById('visitBadge');
+  if(badge) badge.textContent=on?'✏️ Modo editor':'👁 Modo visita';
+  if(!on) switchTab('explorar');
 }
 function setBuildStatus(msg){
   const el = document.getElementById('buildBarStatus');
   if(el) el.textContent = msg;
+}
+function togglePanel(){
+  const panel=document.getElementById('sidebar');
+  const btn=document.getElementById('panelToggle');
+  const collapsed=panel.classList.toggle('collapsed');
+  btn.textContent=collapsed?'☰ Abrir mapa':'✕ Cerrar panel';
+  btn.setAttribute('aria-expanded', String(!collapsed));
+}
+let saveToastTimer=null;
+function showSaveToast(message){
+  const toast=document.getElementById('saveToast');
+  if(!toast) return;
+  toast.textContent=message||'✓ Avance guardado'; toast.classList.add('show');
+  clearTimeout(saveToastTimer); saveToastTimer=setTimeout(()=>toast.classList.remove('show'),2600);
 }
 
 function collectMasksData(){
@@ -5028,14 +5106,14 @@ function scheduleAutoSave(){
   clearTimeout(autoSaveTimer);
   autoSaveTimer = setTimeout(()=>{
     idbSet('latest', collectFullPayload()); // respaldo local, siempre, sin importar si hay sesión de administrador
-    if(getAdminToken()) saveProgress();
+    if(editorMode && getAdminToken()) saveProgress();
   }, 1200);
 }
 
 let saveInFlight = false;
 async function saveProgress(){
   const token = getAdminToken();
-  if(!token){ setBuildStatus('Activa el modo administrador (🔒 arriba) para poder guardar.'); return; }
+  if(!editorMode || !token){ setBuildStatus('Entra al modo editor para poder guardar.'); return; }
   if(saveInFlight) return;
   saveInFlight = true;
   setBuildStatus('Guardando…');
@@ -5057,6 +5135,7 @@ async function saveProgress(){
     if(res.ok && json.ok){
       await idbSet('latest', payload);
       setBuildStatus('Avance guardado — ' + new Date().toLocaleTimeString('es-MX'));
+      showSaveToast('✓ Guardado correctamente');
     } else if(res.status===401){
       setBuildStatus('Clave de administrador incorrecta.');
     } else {
@@ -5177,10 +5256,13 @@ function addAssetChip(name, thumbDataUrl, label){
   chip.className = 'objChip';
   chip.id = 'chip_'+name;
   const imgHtml = thumbDataUrl ? `<img src="${thumbDataUrl}" class="thumb">` : '';
-  chip.innerHTML = `<span style="cursor:pointer;display:flex;align-items:center;gap:6px;">${imgHtml}${label||name}</span> <button title="Quitar de la lista">✕</button>`;
+  chip.innerHTML = `<span style="cursor:pointer;display:flex;align-items:center;gap:6px;">${imgHtml}${label||name}</span> <button title="Eliminar modelo del catálogo">🗑</button>`;
   chip.querySelector('span').onclick = ()=> selectAsset(name);
   chip.querySelector('button').onclick = (ev)=>{
     ev.stopPropagation();
+    const used=placedObjects.filter(p=>p.name===name).length;
+    if(!confirm(`¿Eliminar "${label||name}" del catálogo${used?` y sus ${used} copia(s) colocada(s)`:''}?`)) return;
+    placedObjects.filter(p=>p.name===name).slice().forEach(deleteEntry);
     delete loadedAssets[name];
     chip.remove();
     if(activeAssetName===name){ activeAssetName=null; placingMode=false; container.style.cursor='grab'; }
@@ -5198,7 +5280,12 @@ const vegetationMaterials={
   olive:new THREE.MeshStandardMaterial({color:0x76835a,roughness:.96,flatShading:true}),
   mesquite:new THREE.MeshStandardMaterial({color:0x667742,roughness:.98,flatShading:true}),
   palm:new THREE.MeshStandardMaterial({color:0x5d833f,roughness:.9,flatShading:true,side:THREE.DoubleSide}),
-  pine:new THREE.MeshStandardMaterial({color:0x365c3d,roughness:.96,flatShading:true})
+  pine:new THREE.MeshStandardMaterial({color:0x365c3d,roughness:.96,flatShading:true}),
+  flower:new THREE.MeshStandardMaterial({color:0x8d538b,roughness:.9,flatShading:true}),
+  steel:new THREE.MeshStandardMaterial({color:0x60656a,roughness:.55,metalness:.65}),
+  clay:new THREE.MeshStandardMaterial({color:0x9a583a,roughness:1}),
+  white:new THREE.MeshStandardMaterial({color:0xe8dfcf,roughness:.9}),
+  dark:new THREE.MeshStandardMaterial({color:0x2d2926,roughness:.85})
 };
 function vegetationMesh(geometry,material,position,scale,rotation){
   const mesh=new THREE.Mesh(geometry,material);
@@ -5253,24 +5340,90 @@ function buildPine(){
     g.add(vegetationMesh(new THREE.ConeGeometry(r,h,8),vegetationMaterials.pine,[0,y,0]));
   }); return g;
 }
+function buildVine(){
+  const g=new THREE.Group();
+  const wire=new THREE.MeshStandardMaterial({color:0x554431,roughness:.9});
+  for(let x=-2;x<=2;x+=2){ addTrunk(g,2.1,.09,x,0,0,0,wire); }
+  const bar=vegetationMesh(new THREE.CylinderGeometry(.07,.07,4.5,6),wire,[0,1.75,0],null,[0,0,Math.PI/2]); g.add(bar);
+  for(let x=-1.8;x<=1.8;x+=.6) addCrown(g,x,1.7,0,.55,.65,.45,vegetationMaterials.olive);
+  return g;
+}
+function buildWashingtonia(){ const g=buildPalm(); g.scale.set(.66,.82,.66); return g; }
+function buildAgave(){
+  const g=new THREE.Group();
+  for(let i=0;i<14;i++){ const a=i/14*Math.PI*2; g.add(vegetationMesh(new THREE.ConeGeometry(.32,2.8,5),vegetationMaterials.olive,[Math.cos(a)*.65,.55,Math.sin(a)*.65],[1,.65,1],[Math.PI/2.8,a,0])); }
+  return g;
+}
+function buildEucalyptus(){ const g=new THREE.Group(); addTrunk(g,9,.42,0,0,.03,0,vegetationMaterials.trunkLight); addCrown(g,-1,8,0,2.1,3,1.7,vegetationMaterials.olive); addCrown(g,1,10,.2,1.8,2.8,1.7,vegetationMaterials.olive); return g; }
+function buildMajagua(){ const g=new THREE.Group(); addTrunk(g,5,.4); addCrown(g,0,5.2,0,3.1,2.1,2.6,vegetationMaterials.oak); addCrown(g,-1.8,5,0,1.7,1.6,1.6,vegetationMaterials.flower); return g; }
+function buildJacaranda(){ const g=buildOak(); g.traverse(o=>{if(o.isMesh && o.material===vegetationMaterials.oak)o.material=vegetationMaterials.flower;}); g.scale.set(.78,.72,.78); return g; }
+function buildShrub(){ const g=new THREE.Group(); addCrown(g,0,.65,0,1.5,.75,1.25,vegetationMaterials.mesquite); addCrown(g,.7,.55,.2,.8,.65,.8,vegetationMaterials.oak); return g; }
 const VEGETATION_DEFS=[
   {key:'veg_encino',label:'Encino',builder:buildOak},
   {key:'veg_mezquite',label:'Mezquite',builder:buildMesquite},
   {key:'veg_olivo',label:'Olivo',builder:buildOlive},
   {key:'veg_palma',label:'Palma',builder:buildPalm},
-  {key:'veg_pino',label:'Pino',builder:buildPine}
+  {key:'veg_pino',label:'Pino',builder:buildPine},
+  {key:'veg_vid',label:'Vid',builder:buildVine},
+  {key:'veg_washingtonia',label:'Palma Washingtonia',builder:buildWashingtonia},
+  {key:'veg_maguey',label:'Maguey',builder:buildAgave},
+  {key:'veg_eucalipto',label:'Eucalipto',builder:buildEucalyptus},
+  {key:'veg_majagua',label:'Majagua',builder:buildMajagua},
+  {key:'veg_jacaranda',label:'Jacaranda',builder:buildJacaranda},
+  {key:'veg_matorral',label:'Matorral chico',builder:buildShrub}
 ];
 function buildVegetationCatalog(){
   const wrap=document.getElementById('vegetationList');
   VEGETATION_DEFS.forEach(def=>{
     const prototype=def.builder();
-    loadedAssets[def.key]={type:'model',object:prototype,vegetation:true};
+    loadedAssets[def.key]={type:'model',object:prototype,vegetation:true,catalog:true,baseScale:.68};
     const chip=document.createElement('div'); chip.className='objChip'; chip.id='chip_'+def.key;
     chip.innerHTML=`<span style="cursor:pointer;display:flex;align-items:center;gap:8px;"><img src="${renderThumbnail(prototype)}" class="thumb">${def.label}</span>`;
     chip.querySelector('span').onclick=()=>selectAsset(def.key); wrap.appendChild(chip);
   });
 }
 buildVegetationCatalog();
+
+// Catálogos de ambientación: prototipos 3D ligeros y persistibles. Se
+// mantienen deliberadamente simples para poder colocar decenas en celular.
+function part(group,geometry,material,pos,scale,rot){ group.add(vegetationMesh(geometry,material,pos,scale,rot)); }
+function buildProp(kind,color=0x755238){
+  const g=new THREE.Group(); const mat=new THREE.MeshStandardMaterial({color,roughness:.82,metalness:kind.includes('acero')?.55:0});
+  if(kind==='macetero'){ part(g,new THREE.CylinderGeometry(.65,.48,.8,10),vegetationMaterials.clay,[0,.4,0]); addCrown(g,0,1.15,0,.75,.7,.75,vegetationMaterials.oak); }
+  else if(kind==='florero'){ part(g,new THREE.CylinderGeometry(.25,.38,.7,10),vegetationMaterials.clay,[0,.35,0]); addCrown(g,0,.95,0,.48,.45,.48,vegetationMaterials.flower); }
+  else if(kind==='poste'){ part(g,new THREE.CylinderGeometry(.1,.13,4,8),vegetationMaterials.steel,[0,2,0]); part(g,new THREE.SphereGeometry(.35,10,8),vegetationMaterials.white,[0,4.05,0]); }
+  else if(kind==='corral'){ for(let x=-2;x<=2;x+=2){part(g,new THREE.BoxGeometry(.16,2,.16),mat,[x,1,0]);} for(let y=.55;y<=1.55;y+=1)part(g,new THREE.BoxGeometry(4.3,.12,.12),mat,[0,y,0]); }
+  else { part(g,new THREE.BoxGeometry(2.2,.7,.7),mat,[0,.4,0]); part(g,new THREE.CylinderGeometry(.16,.16,2.4,8),mat,[0,.9,0],null,[0,0,Math.PI/2]); }
+  return g;
+}
+function buildAnimal(kind,color){
+  const g=new THREE.Group(); const mat=new THREE.MeshStandardMaterial({color,roughness:.95});
+  const small=['gallo','gallina','pollito'].includes(kind); const baby=kind.includes('chico');
+  const s=small?.32:(baby?.62:1); part(g,new THREE.SphereGeometry(1,10,7),mat,[0,1.2*s,0],[1.35*s,.75*s,.65*s]);
+  part(g,new THREE.SphereGeometry(.55,9,7),mat,[1.15*s,1.55*s,0],[s,s,s]);
+  for(const x of [-.65,.55])for(const z of [-.35,.35])part(g,new THREE.CylinderGeometry(.09*s,.11*s,1.1*s,6),mat,[x*s,.55*s,z*s]);
+  return g;
+}
+function buildVehicle(color,type){
+  const g=new THREE.Group(); const paint=new THREE.MeshStandardMaterial({color,roughness:.45,metalness:.25});
+  part(g,new THREE.BoxGeometry(type==='tractor'?2.6:4.2,1.05,2),paint,[0,1,0]); part(g,new THREE.BoxGeometry(1.8,.85,1.8),paint,[.45,1.75,0]);
+  for(const x of [-1.35,1.35])for(const z of [-1.05,1.05])part(g,new THREE.CylinderGeometry(.45,.45,.28,12),vegetationMaterials.dark,[x,.55,z],null,[Math.PI/2,0,0]); return g;
+}
+function buildPerson(color,hat){
+  const g=new THREE.Group(); const cloth=new THREE.MeshStandardMaterial({color,roughness:.9});
+  part(g,new THREE.CylinderGeometry(.34,.45,1.5,8),cloth,[0,1.45,0]); part(g,new THREE.SphereGeometry(.3,10,8),vegetationMaterials.clay,[0,2.48,0]);
+  if(hat){ part(g,new THREE.CylinderGeometry(.62,.62,.08,12),vegetationMaterials.trunk,[0,2.78,0]); part(g,new THREE.CylinderGeometry(.32,.4,.25,10),vegetationMaterials.trunk,[0,2.9,0]); } return g;
+}
+const RANCH_CATALOGS=[
+  {list:'decorList',items:[['dec_macetero','Macetero',()=>buildProp('macetero')],['dec_florero','Florero',()=>buildProp('florero')],['dec_poste','Poste de iluminación',()=>buildProp('poste')],['dec_corral','Tramo de corral',()=>buildProp('corral')],['dec_acero','Objeto de acero',()=>buildProp('acero',0x596168)]]},
+  {list:'animalList',items:[['ani_chivo','Chivo',()=>buildAnimal('chivo',0xc7baa0)],['ani_gallo','Gallo',()=>buildAnimal('gallo',0x8f3427)],['ani_gallina','Gallina',()=>buildAnimal('gallina',0xb98c55)],['ani_pollito','Pollito',()=>buildAnimal('pollito',0xe4c84f)],['ani_vaca','Vaca',()=>buildAnimal('vaca',0x594137)],['ani_burro','Burro',()=>buildAnimal('burro',0x777064)],['ani_burrito','Burrito',()=>buildAnimal('chico',0x8b8173)],['ani_caballo','Caballo',()=>buildAnimal('caballo',0x70442e)]]},
+  {list:'vehicleList',items:[['veh_pickup_roja','Pickup roja',()=>buildVehicle(0x9e332b,'pickup')],['veh_pickup_verde','Pickup verde',()=>buildVehicle(0x45634c,'pickup')],['veh_tractor','Tractor',()=>buildVehicle(0xb75b24,'tractor')],['veh_suv','SUV arena',()=>buildVehicle(0xc0aa7b,'suv')]]},
+  {list:'peopleList',items:[['per_visitante','Visitante',()=>buildPerson(0x47779b,false)],['per_trabajador','Trabajador',()=>buildPerson(0xc48a33,false)],['per_ranchero','Ranchero',()=>buildPerson(0x69452d,true)],['per_ranchera','Ranchera',()=>buildPerson(0x7c3f57,true)]]}
+];
+function buildRanchCatalogs(){
+  RANCH_CATALOGS.forEach(cat=>cat.items.forEach(([key,label,builder])=>{ const prototype=builder(); loadedAssets[key]={type:'model',object:prototype,catalog:true,baseScale:1}; const chip=document.createElement('div'); chip.className='objChip'; chip.id='chip_'+key; chip.innerHTML=`<span style="cursor:pointer;display:flex;align-items:center;gap:8px;"><img src="${renderThumbnail(prototype)}" class="thumb">${label}</span>`; chip.querySelector('span').onclick=()=>selectAsset(key); document.getElementById(cat.list).appendChild(chip); }));
+}
+buildRanchCatalogs();
 
 // --- Símbolos integrados (íconos tipo sprite, siempre mirando a cámara) ---
 function buildIconTexture(glyph, bgHex){
@@ -5371,14 +5524,17 @@ function placeAssetAt(worldPoint, placementData){
     instance = asset.object.clone(true);
     instance.position.set(worldPoint.x, y, worldPoint.z);
     if(asset.vegetation){
-      const naturalScale=placementData && Number.isFinite(placementData.scale) ? placementData.scale : .82+Math.random()*.38;
+      const baseScale=asset.baseScale || .68;
+      const naturalScale=placementData && Number.isFinite(placementData.scale) ? placementData.scale : baseScale*(.86+Math.random()*.24);
       const naturalRotation=placementData && Number.isFinite(placementData.rotation) ? placementData.rotation : Math.random()*Math.PI*2;
       instance.scale.setScalar(naturalScale);
       instance.rotation.y=naturalRotation;
       instance.userData.vegetation=true;
       instance.userData.species=activeAssetName;
     } else {
-      instance.rotation.y = placementRotationDeg*Math.PI/180;
+      const savedScale=placementData && Number.isFinite(placementData.scale) ? placementData.scale : (asset.baseScale||1)*(.94+Math.random()*.12);
+      instance.scale.setScalar(savedScale);
+      instance.rotation.y = placementData && Number.isFinite(placementData.rotation) ? placementData.rotation : placementRotationDeg*Math.PI/180;
     }
   }
   scene.add(instance);
@@ -5395,10 +5551,10 @@ let restoringProgress = false;
 function serializePlacedObjects(){
   return placedObjects.map(entry=>{
     const asset=loadedAssets[entry.name];
-    if(entry.type==='model' && asset && asset.vegetation){
+    if(entry.type==='model' && asset && asset.catalog){
       return {
-        kind:'vegetation', key:entry.name,
-        x:entry.obj.position.x, z:entry.obj.position.z,
+        kind:asset.vegetation?'vegetation':'catalog', key:entry.name,
+        x:entry.obj.position.x, yOffset:entry.obj.position.y-sampleElevation(entry.obj.position.x,entry.obj.position.z), z:entry.obj.position.z,
         rotation:entry.obj.rotation.y, scale:entry.obj.scale.x
       };
     }
@@ -5422,7 +5578,7 @@ function restorePlacedObjects(list){
     let key = null;
     if(item.kind==='symbol' && loadedAssets[item.key]){
       key = item.key;
-    } else if(item.kind==='vegetation' && loadedAssets[item.key] && loadedAssets[item.key].vegetation){
+    } else if((item.kind==='vegetation' || item.kind==='catalog') && loadedAssets[item.key] && loadedAssets[item.key].catalog){
       key = item.key;
     } else if(item.kind==='number'){
       key = 'sym_num_'+item.n+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
@@ -5431,6 +5587,7 @@ function restorePlacedObjects(list){
     if(!key) return;
     activeAssetName = key;
     placeAssetAt({x:item.x, z:item.z},{rotation:item.rotation,scale:item.scale});
+    if(Number.isFinite(item.yOffset)) placedObjects[placedObjects.length-1].obj.position.y += item.yOffset;
     if(item.info){
       const entry = placedObjects[placedObjects.length-1];
       if(entry) entry.info = item.info;
@@ -5530,6 +5687,16 @@ function removeSelectedObject(){
   if(!selectedObject) return;
   deleteEntry(selectedObject);
 }
+function confirmDeleteSelected(){
+  if(!selectedObject){ setBuildStatus('Primero selecciona un objeto colocado.'); return; }
+  if(confirm('¿Eliminar definitivamente este objeto del mapa?')) removeSelectedObject();
+}
+function nudgeSelected(dx,dy,dz){
+  if(!selectedObject){ setBuildStatus('Primero selecciona un objeto colocado.'); return; }
+  const p=selectedObject.obj.position; p.x+=dx; p.y+=dy; p.z+=dz;
+  if(selectedObject.stem){ scene.remove(selectedObject.stem); const ground=sampleElevation(p.x,p.z); selectedObject.stem=buildStem(p.y,ground,p.x,p.z); scene.add(selectedObject.stem); }
+  selectEntry(selectedObject); scheduleAutoSave();
+}
 function toggleEraseMode(){
   eraseMode = !eraseMode;
   document.getElementById('eraseToggle').classList.toggle('active', eraseMode);
@@ -5610,10 +5777,13 @@ function animate(){
     el.style.top = y+'px';
   });
   updatePinScaling();
+  const needle=document.getElementById('compassNeedle');
+  if(needle) needle.style.transform=`rotate(${-camAzimuth}rad)`;
   renderer.render(scene, camera);
 }
 animate();
 updateAdminUI();
+if(window.matchMedia('(max-width:700px)').matches) togglePanel();
 loadProgress();
 </script>
 </body>

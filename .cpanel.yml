@@ -1,0 +1,12 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/lxchjs58vg3b/public_html/mapamedialuna.albertovelasco.com.mx/
+    - /bin/mkdir -p $DEPLOYPATH/api
+    - /bin/mkdir -p $DEPLOYPATH/data
+    - /bin/cp index.html $DEPLOYPATH
+    - /bin/cp media_luna_etapa1_territorio_7.html $DEPLOYPATH
+    - /bin/cp .htaccess $DEPLOYPATH
+    - /bin/cp api/save.php $DEPLOYPATH/api/
+    - /bin/cp api/config.example.php $DEPLOYPATH/api/
+    - test -f $DEPLOYPATH/data/state.json || /bin/cp data/state.json $DEPLOYPATH/data/

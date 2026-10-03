@@ -4257,6 +4257,17 @@ function buildMaterialAtlas(keys){
     regions[key] = { offset:[col/ATLAS_COLS, row/rows], scale:[1/ATLAS_COLS, 1/rows] };
   });
   const tex = new THREE.CanvasTexture(canvas);
+  // flipY=false: por defecto three.js invierte verticalmente el canvas al
+  // subirlo a la GPU (para que coincida con la orientación "de imagen").
+  // Nuestras regiones de atlas (offset.y = fila/filas) se calcularon en el
+  // mismo orden en que se DIBUJAN las filas en el canvas (fila 0 = primera
+  // dibujada), así que con flipY activo la GPU terminaba leyendo la fila
+  // contraria a la que cada material esperaba -- por eso "camino" mostraba
+  // el color de "agua" (filas opuestas en la misma columna) y "sendero",
+  // "rocoso" y "bosque" salían negros (su fila volteada caía en la parte
+  // del atlas que aún no tiene nada dibujado). Desactivarlo hace que
+  // offset.y=0 lea la fila 0 tal cual se dibujó, sin inversión.
+  tex.flipY = false;
   tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
   tex.generateMipmaps = false;
   tex.minFilter = THREE.LinearFilter;

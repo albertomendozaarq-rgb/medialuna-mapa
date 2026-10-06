@@ -1,0 +1,11 @@
+RANCHO MEDIA LUNA — REINTERPRETACIÓN 1
+
+Modelo basado en MEDIALUNApararenders.glb.
+Geometría, escala, posiciones, jerarquía y mobiliario originales conservados.
+Se reinterpretaron 60 materiales: adobe terracota, cal arena, madera envejecida, piedra cálida, barro y cubiertas patinadas. Se corrigió el brillo metálico de los materiales no metálicos.
+Texturas incluidas dentro del GLB. No requiere archivos externos.
+Se eliminaron duplicados binarios sin reducir la geometría. El modelo sigue teniendo 1.45 millones de triángulos; es una versión detallada, pendiente de simplificación para el mapa.
+Mantiene el origen y ubicación originales; no está centrado en (0,0,0).
+Esta versión modifica acabados; no añade volúmenes, cubiertas ni elementos arquitectónicos nuevos.
+
+Archivo original: C:\Users\alvel\Documents\MEDIALUNA\MODELS MAPA\MEDIALUNApararenders.glb

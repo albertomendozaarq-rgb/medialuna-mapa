@@ -1,0 +1,22 @@
+{
+  "vertices": 149580,
+  "triangulos": 49860,
+  "dimensiones_m": [
+    18.610000610351562,
+    11.5,
+    24.579999923706055
+  ],
+  "tamano_MB": 5.14,
+  "partes": {
+    "salon_alto": 2982,
+    "chimenea_piedra": 2760,
+    "restaurante_terraza": 17094,
+    "porche_acceso": 5374,
+    "casita_teja": 7654,
+    "ala_adobe": 524,
+    "torre_de_agua": 852,
+    "jardineras": 3440,
+    "letrero_rancho": 8988,
+    "portal_luna": 192
+  }
+}

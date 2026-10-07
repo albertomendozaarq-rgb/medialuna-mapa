@@ -1,6 +1,9 @@
 # La interfaz principal es la versión completa del Taller de paisaje.
 # El mapa anterior permanece en index.html como respaldo durante la migración.
-DirectoryIndex outputs/MediaLuna-muestra-paisaje.html
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^$ outputs/MediaLuna-muestra-paisaje.html [L]
+</IfModule>
 
 # El navegador no debe quedarse con una copia vieja de index.html después de
 # cada despliegue -- la app es de un solo archivo y las ediciones (mapa,

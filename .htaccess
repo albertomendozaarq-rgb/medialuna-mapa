@@ -6,7 +6,7 @@
 # (If-None-Match/ETag) antes de usarlo -- si no cambió, el servidor contesta
 # 304 sin volver a mandar el archivo completo, así que no sale caro.
 <IfModule mod_headers.c>
-  <FilesMatch "\.(html|htm)$">
+  <FilesMatch "\.(html|htm|js|css|json)$">
     Header set Cache-Control "no-cache, must-revalidate"
   </FilesMatch>
 </IfModule>

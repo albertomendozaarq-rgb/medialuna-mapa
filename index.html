@@ -194,6 +194,59 @@
     font-family:inherit; font-size:13px; background:#fffdf8; color:var(--texto);
     box-sizing:border-box; resize:vertical;
   }
+
+  /* Interfaz 2026: conserva el motor LiDAR y la persistencia del mapa,
+     pero adopta el lenguaje visual claro del Taller de paisaje. */
+  :root{
+    --ui-bg:#f7f7ef; --ui-paper:#fffef8; --ui-ink:#303b30;
+    --ui-muted:#78816d; --ui-line:#daddce; --ui-green:#314b36;
+    --ui-accent:#a17d41;
+    --panel-bg:rgba(247,247,239,.97); --panel-bg-solid:#f7f7ef;
+    --panel-texto:#303b30; --panel-texto-tenue:#78816d;
+    --card-bg:#fffef8; --card-border:#dfe2d3;
+  }
+  html,body{font-family:'Segoe UI',system-ui,sans-serif;background:#d8dfcc;color:var(--ui-ink)}
+  header{height:74px;padding:0 24px;display:flex;align-items:center;gap:14px;background:rgba(247,247,239,.97);border-bottom:1px solid var(--ui-line);color:var(--ui-ink);pointer-events:auto}
+  header .moon{font:38px/1 Georgia;color:var(--ui-accent)}
+  header .brand-copy{display:flex;flex-direction:column;gap:4px}
+  header h1{font:18px Georgia;letter-spacing:3px;text-transform:uppercase}
+  header .sub{font:9px/1.2 'Segoe UI',system-ui,sans-serif;letter-spacing:2.2px;color:var(--ui-muted)}
+  header .stage{margin-left:18px;padding-left:18px;border-left:1px solid var(--ui-line);font-size:11px;color:var(--ui-muted)}
+  header .stage b{display:block;color:#4a5844;font-weight:500;margin-top:3px}
+  #sidebar{left:0;top:74px;bottom:0;width:304px;border:0;border-right:1px solid var(--ui-line);border-radius:0;box-shadow:none;background:var(--ui-bg)}
+  #panelToggle{left:316px;top:86px;border-color:var(--ui-line);background:rgba(250,251,245,.94);color:var(--ui-green);box-shadow:0 4px 16px #34492818;font:11px 'Segoe UI',system-ui,sans-serif;padding:8px 11px}
+  #visitBadge{right:18px;top:20px;background:#eef2e4;border:1px solid #cbd4c1;color:#425934;font-size:11px}
+  #tabBar{padding:12px 12px 9px;gap:3px;border-bottom:1px solid var(--ui-line);overflow-x:auto}
+  #tabBar button{min-width:62px;padding:8px 6px;border:0!important;border-radius:7px;background:transparent;color:var(--ui-muted);font-size:15px}
+  #tabBar button.active{background:var(--ui-green);color:#fff}
+  #tabBar button .tabLabel{font-family:'Segoe UI',system-ui,sans-serif;font-size:9px;letter-spacing:.2px}
+  #tabContent{padding:18px 15px 24px;color:var(--ui-ink)}
+  .tabPane h3{font:20px Georgia;color:var(--ui-ink);margin:0 0 14px}
+  .catalogSection{border-top-color:var(--ui-line)}
+  .chipBtn,.swatch,.objChip,.row.buttons button,.axisGrid button,.fileBtn{border-color:var(--card-border);background:var(--ui-paper);color:var(--ui-ink);font-family:'Segoe UI',system-ui,sans-serif}
+  .chipBtn.active,.objChip.active,#tabBar button.active{background:var(--ui-green);border-color:var(--ui-green);color:#fff}
+  .swatch.active{border-color:#6b835a;background:#eef2e4}
+  .row.buttons button{padding:9px 8px}
+  .row.buttons button:hover,.axisGrid button:hover,.chipBtn:hover{background:#e5e9db}
+  .navGrid button{border-color:var(--ui-line);background:var(--ui-paper);color:var(--ui-green)}
+  input[type=range]{accent-color:#688253}
+  .hint{color:var(--ui-muted);font-style:normal}
+  #buildBar{border-bottom:1px solid var(--ui-line);padding-bottom:8px!important}
+  #buildBarStatus{color:var(--ui-muted)}
+  #saveToast{top:88px;background:var(--ui-green);border-color:#6b835a}
+  #compass{background:rgba(247,247,239,.94);border-color:#aab59e;color:var(--ui-green)}
+  #storyModal{background:rgba(34,45,35,.55)}
+  #storyModalBox{background:var(--ui-bg);border-color:var(--ui-line);box-shadow:0 18px 55px #26312655}
+  #storyModalBox h3{color:var(--ui-ink)}
+  #storyModalBox input,#storyModalBox textarea{border-color:var(--ui-line);background:var(--ui-paper)}
+  @media(max-width:700px){
+    header{height:64px;padding:0 13px} header .moon{font-size:31px} header h1{font-size:14px;letter-spacing:2px} header .sub{font-size:8px} header .stage{display:none}
+    #sidebar{top:64px;left:0;right:0;bottom:62px;width:auto;max-height:none;border-right:0;z-index:20}
+    #sidebar.collapsed{display:none}
+    #panelToggle{position:fixed;left:10px;top:auto;bottom:12px;z-index:24}
+    #visitBadge{top:15px;right:10px;font-size:9px}
+    #compass{bottom:12px}
+  }
 </style>
 </head>
 <body>
@@ -201,11 +254,12 @@
 <div id="labels"></div>
 
 <header>
-  <h1>Mapa Interactivo La Media Luna</h1>
-  <div class="sub">DONDE SE VIVE LA BUENA VIDA DE CAMPO</div>
+  <div class="moon">◐</div>
+  <div class="brand-copy"><h1>Media Luna</h1><div class="sub">DONDE SE VIVE LA BUENA VIDA DE CAMPO</div></div>
+  <div class="stage">MAPA INTERACTIVO<b>Territorio real · interfaz de paisaje</b></div>
 </header>
 
-<button id="panelToggle" onclick="togglePanel()" aria-expanded="true">☰ Abrir mapa</button>
+<button id="panelToggle" onclick="togglePanel()" aria-expanded="true">✕ Cerrar catálogo</button>
 <div id="visitBadge">👁 Modo visita</div>
 <div id="saveToast" role="status">✓ Avance guardado</div>
 <div id="compass" aria-label="Brújula, norte INEGI"><span>N</span><div id="compassNeedle"></div></div>
@@ -302,6 +356,7 @@
       <div class="catalogSection"><h3>Animales de granja</h3><div class="row col" id="animalList"></div></div>
       <div class="catalogSection"><h3>Vehículos</h3><div class="row col" id="vehicleList"></div></div>
       <div class="catalogSection"><h3>Personas</h3><div class="row col" id="peopleList"></div></div>
+      <div class="catalogSection"><h3>Agua</h3><div class="row col" id="waterList"></div></div>
 
       <h3 style="margin-top:14px;">Símbolos del mapa</h3>
       <div class="row col" id="symbolList"></div>
@@ -5024,7 +5079,7 @@ function togglePanel(){
   const panel=document.getElementById('sidebar');
   const btn=document.getElementById('panelToggle');
   const collapsed=panel.classList.toggle('collapsed');
-  btn.textContent=collapsed?'☰ Abrir mapa':'✕ Cerrar panel';
+  btn.textContent=collapsed?'☷ Abrir catálogo':'✕ Cerrar catálogo';
   btn.setAttribute('aria-expanded', String(!collapsed));
 }
 let saveToastTimer=null;
@@ -5389,7 +5444,10 @@ function buildProp(kind,color=0x755238){
   if(kind==='macetero'){ part(g,new THREE.CylinderGeometry(.65,.48,.8,10),vegetationMaterials.clay,[0,.4,0]); addCrown(g,0,1.15,0,.75,.7,.75,vegetationMaterials.oak); }
   else if(kind==='florero'){ part(g,new THREE.CylinderGeometry(.25,.38,.7,10),vegetationMaterials.clay,[0,.35,0]); addCrown(g,0,.95,0,.48,.45,.48,vegetationMaterials.flower); }
   else if(kind==='poste'){ part(g,new THREE.CylinderGeometry(.1,.13,4,8),vegetationMaterials.steel,[0,2,0]); part(g,new THREE.SphereGeometry(.35,10,8),vegetationMaterials.white,[0,4.05,0]); }
-  else if(kind==='corral'){ for(let x=-2;x<=2;x+=2){part(g,new THREE.BoxGeometry(.16,2,.16),mat,[x,1,0]);} for(let y=.55;y<=1.55;y+=1)part(g,new THREE.BoxGeometry(4.3,.12,.12),mat,[0,y,0]); }
+  else if(kind==='corral' || kind==='cerca'){ const span=kind==='cerca'?3:2; for(let x=-span;x<=span;x+=2){part(g,new THREE.BoxGeometry(.16,2,.16),mat,[x,1,0]);} for(let y=.55;y<=1.55;y+=1)part(g,new THREE.BoxGeometry(span*2+.3,.12,.12),mat,[0,y,0]); }
+  else if(kind==='caballeriza'){ for(let x=-3;x<=3;x+=2){part(g,new THREE.BoxGeometry(.18,2.7,.18),mat,[x,1.35,0]);} part(g,new THREE.BoxGeometry(6.5,.18,3.2),mat,[0,2.8,0]); for(let x of [-2,0,2])part(g,new THREE.BoxGeometry(.12,1.8,3),mat,[x,.9,0]); }
+  else if(kind==='bebedero'){ part(g,new THREE.BoxGeometry(2.2,.55,1.05),mat,[0,.3,0]); part(g,new THREE.BoxGeometry(1.85,.16,.75),new THREE.MeshStandardMaterial({color:0x6f9d9c,transparent:true,opacity:.72,roughness:.25}),[0,.6,0]); }
+  else if(kind==='arroyo' || kind==='estanque'){ const waterMat=new THREE.MeshStandardMaterial({color:0x6f9d9c,transparent:true,opacity:.72,roughness:.2,metalness:.08}); const geo=kind==='arroyo'?new THREE.PlaneGeometry(3,12,4,10):new THREE.CircleGeometry(4,32); geo.rotateX(-Math.PI/2); part(g,geo,waterMat,[0,.08,0]); }
   else { part(g,new THREE.BoxGeometry(2.2,.7,.7),mat,[0,.4,0]); part(g,new THREE.CylinderGeometry(.16,.16,2.4,8),mat,[0,.9,0],null,[0,0,Math.PI/2]); }
   return g;
 }
@@ -5412,10 +5470,11 @@ function buildPerson(color,hat){
   if(hat){ part(g,new THREE.CylinderGeometry(.62,.62,.08,12),vegetationMaterials.trunk,[0,2.78,0]); part(g,new THREE.CylinderGeometry(.32,.4,.25,10),vegetationMaterials.trunk,[0,2.9,0]); } return g;
 }
 const RANCH_CATALOGS=[
-  {list:'decorList',items:[['dec_macetero','Macetero',()=>buildProp('macetero')],['dec_florero','Florero',()=>buildProp('florero')],['dec_poste','Poste de iluminación',()=>buildProp('poste')],['dec_corral','Tramo de corral',()=>buildProp('corral')],['dec_acero','Objeto de acero',()=>buildProp('acero',0x596168)]]},
-  {list:'animalList',items:[['ani_chivo','Chivo',()=>buildAnimal('chivo',0xc7baa0)],['ani_gallo','Gallo',()=>buildAnimal('gallo',0x8f3427)],['ani_gallina','Gallina',()=>buildAnimal('gallina',0xb98c55)],['ani_pollito','Pollito',()=>buildAnimal('pollito',0xe4c84f)],['ani_vaca','Vaca',()=>buildAnimal('vaca',0x594137)],['ani_burro','Burro',()=>buildAnimal('burro',0x777064)],['ani_burrito','Burrito',()=>buildAnimal('chico',0x8b8173)],['ani_caballo','Caballo',()=>buildAnimal('caballo',0x70442e)]]},
+  {list:'decorList',items:[['dec_macetero','Macetero',()=>buildProp('macetero')],['dec_florero','Florero',()=>buildProp('florero')],['dec_poste','Poste de iluminación',()=>buildProp('poste')],['dec_corral','Corral',()=>buildProp('corral')],['dec_cerca','Cerca',()=>buildProp('cerca')],['dec_caballeriza','Caballeriza · 3 puestos',()=>buildProp('caballeriza')],['dec_bebedero','Bebedero',()=>buildProp('bebedero')],['dec_acero','Objeto de acero',()=>buildProp('acero',0x596168)]]},
+  {list:'animalList',items:[['ani_gavilan','Gavilán',()=>buildAnimal('gavilan',0x806344)],['ani_chivo','Chiva enana',()=>buildAnimal('chivo',0xc7baa0)],['ani_gallo','Gallo',()=>buildAnimal('gallo',0x8f3427)],['ani_gallina','Gallina',()=>buildAnimal('gallina',0xb98c55)],['ani_pollito','Pollito',()=>buildAnimal('pollito',0xe4c84f)],['ani_vaca','Vaca',()=>buildAnimal('vaca',0x594137)],['ani_burro','Burrita mamá',()=>buildAnimal('burro',0x777064)],['ani_burrito','Burrito',()=>buildAnimal('chico',0x8b8173)],['ani_caballo','Caballo',()=>buildAnimal('caballo',0x70442e)],['ani_yegua','Yegua',()=>buildAnimal('yegua',0xc0ad91)]]},
   {list:'vehicleList',items:[['veh_pickup_roja','Pickup roja',()=>buildVehicle(0x9e332b,'pickup')],['veh_pickup_verde','Pickup verde',()=>buildVehicle(0x45634c,'pickup')],['veh_tractor','Tractor',()=>buildVehicle(0xb75b24,'tractor')],['veh_suv','SUV arena',()=>buildVehicle(0xc0aa7b,'suv')]]},
-  {list:'peopleList',items:[['per_visitante','Visitante',()=>buildPerson(0x47779b,false)],['per_trabajador','Trabajador',()=>buildPerson(0xc48a33,false)],['per_ranchero','Ranchero',()=>buildPerson(0x69452d,true)],['per_ranchera','Ranchera',()=>buildPerson(0x7c3f57,true)]]}
+  {list:'peopleList',items:[['per_visitante','Visitante',()=>buildPerson(0x47779b,false)],['per_trabajador','Trabajador',()=>buildPerson(0xc48a33,false)],['per_ranchero','Ranchero',()=>buildPerson(0x69452d,true)],['per_ranchera','Ranchera',()=>buildPerson(0x7c3f57,true)]]},
+  {list:'waterList',items:[['agua_arroyo','Arroyo',()=>buildProp('arroyo')],['agua_estanque','Estanque',()=>buildProp('estanque')]]}
 ];
 function buildRanchCatalogs(){
   RANCH_CATALOGS.forEach(cat=>cat.items.forEach(([key,label,builder])=>{ const prototype=builder(); loadedAssets[key]={type:'model',object:prototype,catalog:true,baseScale:1}; const chip=document.createElement('div'); chip.className='objChip'; chip.id='chip_'+key; chip.innerHTML=`<span style="cursor:pointer;display:flex;align-items:center;gap:8px;"><img src="${renderThumbnail(prototype)}" class="thumb">${label}</span>`; chip.querySelector('span').onclick=()=>selectAsset(key); document.getElementById(cat.list).appendChild(chip); }));

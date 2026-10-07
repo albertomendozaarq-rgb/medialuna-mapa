@@ -1,3 +1,7 @@
+# La interfaz principal es la versión completa del Taller de paisaje.
+# El mapa anterior permanece en index.html como respaldo durante la migración.
+DirectoryIndex outputs/MediaLuna-muestra-paisaje.html
+
 # El navegador no debe quedarse con una copia vieja de index.html después de
 # cada despliegue -- la app es de un solo archivo y las ediciones (mapa,
 # pinceles, guardado) deben verse de inmediato sin pedirle al usuario que

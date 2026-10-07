@@ -10,3 +10,12 @@
     Header set Cache-Control "no-cache, must-revalidate"
   </FilesMatch>
 </IfModule>
+
+# Este HTML autónomo contiene Three.js y todos los modelos embebidos. El
+# módulo de compresión del hosting corta la respuesta HTTP/2 al comprimirlo;
+# servirlo sin gzip evita el error 500/framing sin afectar imágenes o GLB.
+<IfModule mod_env.c>
+  <FilesMatch "\.(html|htm)$">
+    SetEnv no-gzip 1
+  </FilesMatch>
+</IfModule>

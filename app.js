@@ -1,6 +1,6 @@
-import * as T from 'three';import {OrbitControls} from 'orbit';import {createPlant,SPECIES,disposePlant} from './flora.js';import {Terrain,WIDTH,DEPTH,CENTER_X,CENTER_Z,X0,X1,Z0,Z1,RES,heightAt,SOILS} from './terrain.js';
-import {PROPS,createProp,animateWater,animateProps} from './props.js';import {GestureIntent} from './gestures.js';
-import {allModules,getModule,instance,loadModules,prepare,register,hideModule,ensureRefs,metadata,modulePackage,fromPackage,releaseInstance,CATEGORIES} from './modules.js';
+import * as T from 'three';import {OrbitControls} from 'orbit';import {createPlant,SPECIES,disposePlant} from './flora.js?v=20261007-2';import {Terrain,WIDTH,DEPTH,CENTER_X,CENTER_Z,X0,X1,Z0,Z1,RES,heightAt,SOILS} from './terrain.js?v=20261007-2';
+import {PROPS,createProp,animateWater,animateProps} from './props.js?v=20261007-2';import {GestureIntent} from './gestures.js?v=20261007-2';
+import {allModules,getModule,instance,loadModules,prepare,register,hideModule,ensureRefs,metadata,modulePackage,fromPackage,releaseInstance,CATEGORIES} from './modules.js?v=20261007-2';
 Object.assign(SPECIES,PROPS);
 function syncModuleSpecies(){for(const item of allModules())SPECIES[item.id]={name:item.name,note:item.missing?'Archivo pendiente':CATEGORIES[item.category],height:item.height,category:'modules'}}
 const moduleWarnings=await loadModules();syncModuleSpecies();

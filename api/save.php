@@ -2,7 +2,7 @@
 /**
  * api/save.php -- guarda el progreso editorial del mapa (rutas dibujadas en
  * "Caminos", pintura de terreno, símbolos/números colocados con su ficha)
- * en data/state.json, del lado del servidor.
+ * del editor WebGL en data/project-state.json, del lado del servidor.
  *
  * Requiere la clave de administrador en el encabezado X-Admin-Token,
  * definida en api/config.php (que NO se sube a git -- ver
@@ -12,6 +12,15 @@
 
 header('Content-Type: application/json; charset=utf-8');
 
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    $state = __DIR__ . '/../data/project-state.json';
+    $seed = __DIR__ . '/../data/project-seed.json';
+    $source = file_exists($state) ? $state : $seed;
+    if (!file_exists($source)) { http_response_code(404); echo json_encode(['ok' => false, 'error' => 'Todavía no hay un avance publicado']); exit; }
+    header('Cache-Control: no-store, max-age=0');
+    readfile($source);
+    exit;
+}
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['ok' => false, 'error' => 'Método no permitido']);
@@ -52,7 +61,7 @@ if ($raw === false || strlen($raw) === 0) {
     echo json_encode(['ok' => false, 'error' => 'Sin datos en la petición']);
     exit;
 }
-if (strlen($raw) > 20 * 1024 * 1024) { // 20 MB -- las máscaras de pintura viajan como PNG en base64
+if (strlen($raw) > 30 * 1024 * 1024) {
     http_response_code(413);
     echo json_encode(['ok' => false, 'error' => 'Los datos enviados son demasiado grandes']);
     exit;
@@ -65,7 +74,7 @@ if (!is_array($data)) {
     exit;
 }
 
-foreach (['roadPaths', 'masks', 'objects'] as $key) {
+foreach (['version', 'a', 'b', 'c', 'objects', 'camera', 'target', 'nextId'] as $key) {
     if (!array_key_exists($key, $data)) {
         http_response_code(400);
         echo json_encode(['ok' => false, 'error' => "Falta el campo '$key'"]);
@@ -80,8 +89,8 @@ if ($dataDir === false) {
     exit;
 }
 
-$statePath = $dataDir . '/state.json';
-$backupPath = $dataDir . '/state.backup.json';
+$statePath = $dataDir . '/project-state.json';
+$backupPath = $dataDir . '/project-state.backup.json';
 
 // Respaldo de la versión anterior antes de sobrescribir -- permite volver
 // atrás a mano (renombrando state.backup.json a state.json) si algo sale mal.
@@ -89,7 +98,6 @@ if (file_exists($statePath)) {
     @copy($statePath, $backupPath);
 }
 
-$data['version'] = 1;
 $data['updatedAt'] = date('c');
 
 $tmpPath = $statePath . '.tmp';

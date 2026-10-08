@@ -34,3 +34,5 @@ jobs:
             api/config.php
             data/state.json
             data/state.backup.json
+            data/project-state.json
+            data/project-state.backup.json

@@ -11,6 +11,10 @@
   </FilesMatch>
 </IfModule>
 
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/css application/javascript text/javascript application/json
+</IfModule>
+
 # Este HTML autónomo contiene Three.js y todos los modelos embebidos. El
 # módulo de compresión del hosting corta la respuesta HTTP/2 al comprimirlo;
 # servirlo sin gzip evita el error 500/framing sin afectar imágenes o GLB.

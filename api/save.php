@@ -18,7 +18,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $source = file_exists($state) ? $state : $seed;
     if (!file_exists($source)) { http_response_code(404); echo json_encode(['ok' => false, 'error' => 'Todavía no hay un avance publicado']); exit; }
     header('Cache-Control: no-store, max-age=0');
-    readfile($source);
+    header('Vary: Accept-Encoding');
+    $raw = file_get_contents($source);
+    $acceptsGzip = strpos($_SERVER['HTTP_ACCEPT_ENCODING'] ?? '', 'gzip') !== false;
+    if ($raw !== false && $acceptsGzip && function_exists('gzencode')) {
+        $compressed = gzencode($raw, 6);
+        if ($compressed !== false) {
+            header('Content-Encoding: gzip');
+            header('Content-Length: ' . strlen($compressed));
+            echo $compressed;
+            exit;
+        }
+    }
+    if ($raw !== false) echo $raw; else readfile($source);
     exit;
 }
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -40,6 +52,11 @@ $realToken = (string)($config['admin_token'] ?? '');
 if ($realToken === '' || $realToken === 'CAMBIA-ESTA-CLAVE-POR-UNA-LARGA-Y-UNICA' || !hash_equals($realToken, (string)$sentToken)) {
     http_response_code(401);
     echo json_encode(['ok' => false, 'error' => 'Clave de administrador incorrecta o no configurada']);
+    exit;
+}
+
+if (isset($_GET['auth'])) {
+    echo json_encode(['ok' => true]);
     exit;
 }
 

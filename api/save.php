@@ -13,6 +13,24 @@
 header('Content-Type: application/json; charset=utf-8');
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    if (isset($_GET['modules'])) {
+        $manifestPath = __DIR__ . '/../data/modules.json';
+        header('Cache-Control: no-store, max-age=0');
+        if (!file_exists($manifestPath)) { echo json_encode(['version' => 1, 'modules' => []]); exit; }
+        readfile($manifestPath);
+        exit;
+    }
+    if (isset($_GET['module'])) {
+        $id = (string)$_GET['module'];
+        if (!preg_match('/^mod:[a-z0-9_-]{1,80}$/', $id)) { http_response_code(400); echo json_encode(['ok' => false, 'error' => 'Identificador de módulo inválido']); exit; }
+        $file = __DIR__ . '/../data/modules/' . substr($id, 4) . '.glb';
+        if (!file_exists($file)) { http_response_code(404); echo json_encode(['ok' => false, 'error' => 'Módulo no encontrado']); exit; }
+        header('Content-Type: model/gltf-binary');
+        header('Content-Length: ' . filesize($file));
+        header('Cache-Control: no-cache, must-revalidate');
+        readfile($file);
+        exit;
+    }
     $state = __DIR__ . '/../data/project-state.json';
     $seed = __DIR__ . '/../data/project-seed.json';
     $source = file_exists($state) ? $state : $seed;
@@ -57,6 +75,75 @@ if ($realToken === '' || $realToken === 'CAMBIA-ESTA-CLAVE-POR-UNA-LARGA-Y-UNICA
 
 if (isset($_GET['auth'])) {
     echo json_encode(['ok' => true]);
+    exit;
+}
+
+// Publica un GLB de forma independiente al JSON del mapa. Así una copia del
+// objeto sólo guarda su id y cualquier dispositivo puede descargar la malla.
+if (isset($_GET['module'])) {
+    if (!isset($_FILES['glb'], $_FILES['meta'])) {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'error' => 'Faltan el GLB o su ficha']);
+        exit;
+    }
+    if ($_FILES['glb']['error'] !== UPLOAD_ERR_OK || $_FILES['meta']['error'] !== UPLOAD_ERR_OK) {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'error' => 'El servidor rechazó la carga; revisa upload_max_filesize y post_max_size']);
+        exit;
+    }
+    $size = (int)$_FILES['glb']['size'];
+    if ($size < 20 || $size > 80 * 1024 * 1024) {
+        http_response_code(413);
+        echo json_encode(['ok' => false, 'error' => 'El GLB debe pesar entre 20 bytes y 80 MB']);
+        exit;
+    }
+    $meta = json_decode((string)file_get_contents($_FILES['meta']['tmp_name']), true);
+    $categories = ['decor', 'buildings', 'animals', 'people', 'vehicles', 'ranch', 'plants'];
+    if (!is_array($meta) || !preg_match('/^mod:[a-z0-9_-]{1,80}$/', (string)($meta['id'] ?? '')) ||
+        !is_string($meta['name'] ?? null) || trim($meta['name']) === '' || strlen($meta['name']) > 80 ||
+        !in_array($meta['category'] ?? '', $categories, true) || !is_numeric($meta['height'] ?? null) ||
+        $meta['height'] < .05 || $meta['height'] > 100 || !is_numeric($meta['yaw'] ?? 0)) {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'error' => 'Ficha de módulo inválida']);
+        exit;
+    }
+    $tmp = $_FILES['glb']['tmp_name'];
+    $header = file_get_contents($tmp, false, null, 0, 12);
+    if ($header === false || strlen($header) !== 12 || substr($header, 0, 4) !== "glTF" || unpack('V', substr($header, 4, 4))[1] !== 2 || unpack('V', substr($header, 8, 4))[1] !== $size) {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'error' => 'El archivo no es un GLB 2 válido']);
+        exit;
+    }
+    $hash = hash_file('sha256', $tmp);
+    $expectedId = 'mod:' . substr($hash, 0, 24);
+    if (!hash_equals($expectedId, $meta['id'])) {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'error' => 'El identificador no coincide con el contenido del GLB']);
+        exit;
+    }
+    $dataDir = realpath(__DIR__ . '/../data');
+    if ($dataDir === false) { http_response_code(500); echo json_encode(['ok' => false, 'error' => 'No existe la carpeta data/']); exit; }
+    $moduleDir = $dataDir . '/modules';
+    if (!is_dir($moduleDir) && !mkdir($moduleDir, 0755, true)) { http_response_code(500); echo json_encode(['ok' => false, 'error' => 'No se pudo crear la biblioteca de módulos']); exit; }
+    $target = $moduleDir . '/' . substr($meta['id'], 4) . '.glb';
+    if (!file_exists($target) && !move_uploaded_file($tmp, $target)) { http_response_code(500); echo json_encode(['ok' => false, 'error' => 'No se pudo guardar el GLB en el servidor']); exit; }
+    $manifestPath = $dataDir . '/modules.json';
+    $manifest = ['version' => 1, 'modules' => []];
+    if (file_exists($manifestPath)) {
+        $existing = json_decode((string)file_get_contents($manifestPath), true);
+        if (is_array($existing) && isset($existing['modules']) && is_array($existing['modules'])) $manifest = $existing;
+    }
+    $record = ['id' => $meta['id'], 'name' => trim($meta['name']), 'category' => $meta['category'], 'height' => (float)$meta['height'], 'yaw' => (float)($meta['yaw'] ?? 0)];
+    $updated = false;
+    foreach ($manifest['modules'] as $i => $module) if (($module['id'] ?? '') === $record['id']) { $manifest['modules'][$i] = $record; $updated = true; break; }
+    if (!$updated) $manifest['modules'][] = $record;
+    $manifestTmp = $manifestPath . '.tmp';
+    if (file_put_contents($manifestTmp, json_encode($manifest, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)) === false || !rename($manifestTmp, $manifestPath)) {
+        http_response_code(500);
+        echo json_encode(['ok' => false, 'error' => 'El GLB llegó, pero no se pudo actualizar su catálogo']);
+        exit;
+    }
+    echo json_encode(['ok' => true, 'id' => $record['id'], 'bytes' => $size, 'updatedAt' => date('c')]);
     exit;
 }
 

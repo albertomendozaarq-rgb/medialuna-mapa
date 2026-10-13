@@ -23,7 +23,7 @@ export async function parseModel(buffer){inspectGLB(buffer);const manager=new T.
 }
 export function instance(item){
  const root=new T.Group();if(!item?.template){const m=new T.Mesh(new T.BoxGeometry(1,1,1),new T.MeshStandardMaterial({color:'#b9a880',wireframe:true}));m.position.y=.5;root.add(m);root.userData.missingModule=true;return root}
- const model=item.template.clone(true);model.traverse(o=>{if(o.isMesh){o.geometry=o.geometry.clone();o.material=Array.isArray(o.material)?o.material.map(m=>m.clone()):o.material.clone()}});
+ const model=item.template.clone(true);
  const wrapper=new T.Group();wrapper.add(model);const b=new T.Box3().setFromObject(model),s=b.getSize(new T.Vector3()),c=b.getCenter(new T.Vector3());model.position.sub(new T.Vector3(c.x,b.min.y,c.z));wrapper.scale.setScalar(item.height/s.y);wrapper.rotation.y=T.MathUtils.degToRad(item.yaw||0);root.add(wrapper);return root;
 }
 export async function prepare(buffer,fields){const hash=await crypto.subtle.digest('SHA-256',buffer);const id='mod:'+Array.from(new Uint8Array(hash)).slice(0,12).map(n=>n.toString(16).padStart(2,'0')).join('');const m=validateMeta({...fields,id});return {...m,buffer,template:await parseModel(buffer),source:'local'}}
@@ -39,4 +39,4 @@ export function base64(buffer){const a=new Uint8Array(buffer);let parts=[];for(l
 export function unbase64(s){if(typeof s!=='string'||s.length>MAX_BYTES*1.34)throw Error('Módulo demasiado grande');const r=atob(s),a=new Uint8Array(r.length);for(let i=0;i<r.length;i++)a[i]=r.charCodeAt(i);return a.buffer}
 export function modulePackage(item){if(!item.buffer)throw Error('Falta el archivo del módulo');return {format:'medialuna-module',version:1,...metadata(item),glb:base64(item.buffer)}}
 export async function fromPackage(raw){if(raw.format!=='medialuna-module'||raw.version!==1)throw Error('Paquete de módulo inválido');const m=validateMeta(raw),item=await prepare(unbase64(raw.glb),m);if(item.id!==m.id)throw Error('El contenido no coincide con la ficha');return {...item,hidden:!!raw.hidden}}
-export function releaseInstance(root){root.traverse(o=>{if(o.isMesh){o.geometry.dispose();for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose()}})}
+export function releaseInstance(root){root.clear()}

@@ -7,6 +7,8 @@ deployment:
     - /bin/cp index.html $DEPLOYPATH
     - /bin/cp media_luna_etapa1_territorio_7.html $DEPLOYPATH
     - /bin/cp .htaccess $DEPLOYPATH
+    - /bin/cp app.js style.css terrain.js flora.js fauna.js props.js modules.js gestures.js world.js lighting.js $DEPLOYPATH
+    - /bin/cp three.module.js OrbitControls.js GLTFLoader.js BufferGeometryUtils.js $DEPLOYPATH
     - /bin/cp api/save.php $DEPLOYPATH/api/
     - /bin/cp api/config.example.php $DEPLOYPATH/api/
     - test -f $DEPLOYPATH/data/state.json || /bin/cp data/state.json $DEPLOYPATH/data/
